@@ -5,27 +5,38 @@
 #include "led.h"
 #include "pushButton.h"
 
+// THE DELIVER FILE
+
 // seven_segment_count
+
 #define START 0x00
 #define END_NUMBER 0x99
 #define NEXT_COUNT  0X06
 #define RIGHT_SEG_DATA_MASK 0x0f
 #define LEFT_SEG_DATA_MASK  4
 # define MAX_COUN_RIGHT_SEG 0X0A
-# define SEG_ENABLE_TIME 40
-# define COUNT_TIME 100
+# define COUNT_TIME 150
+
+
+
+
 // state machine
+
 #define STOP 0
 #define GET_READY 1
 #define GO 2
-#define STATE_MACHINE_SECOND 315000
+#define STATE_MACHINE_SECOND 1000
+
+
 // button_application
 
-# define SECOND 250
-#define TEST_SEGMENT 250
+# define SECOND 915
+#define TEST_SEGMENT 50
 #define  RISE_HAND_TIME 30
-#define MULTIPLE_PRESSED_DELAY 340
-#define SINGLE_PRESSED_DELAY 310
+#define MULTIPLE_PRESSED_DELAY 160
+#define SINGLE_REEASED_DELAY 130
+
+
 
 void seven_seg_app(void);
 void button_app(void);
@@ -36,51 +47,51 @@ int main(){
 	
 	// button_app();
 	//seven_seg_app();
-	 state_machine();
+	// state_machine();
+	
+
 	return FALSE;
 	
 }
 
 
+
+
 void button_app(void){
+	
 	Led_Init(LED_3);
 	pushButtonInit(BTN_0);
-	uint8_t button_state;
+
 	uint32_t delay,flag;
 	while(TRUE){
 		flag=FALSE;
 		delay=FALSE;
 		Led_Off(LED_3);
 		
-		button_state=pushButtonGetStatus(BTN_0);
+		while(pushButtonGetStatus(BTN_0)==Released);
 		
-		while(button_state!=Released){
-			button_state=pushButtonGetStatus(BTN_0);
-		}
-		button_state=pushButtonGetStatus(BTN_0);
-		while(button_state==Released){
-		button_state=pushButtonGetStatus(BTN_0);}
+		while(pushButtonGetStatus(BTN_0)==Pressed);
 		
 		flag+=(SECOND);
 		Led_On(LED_3);
 		
 		while(delay<flag){
 			softwareDelayMs( TEST_SEGMENT);
-			button_state=pushButtonGetStatus(BTN_0);
-			if(button_state==Released){
+			if(pushButtonGetStatus(BTN_0)==Pressed){
 				softwareDelayMs(RISE_HAND_TIME);
 				flag+=(SECOND);
 				delay+=MULTIPLE_PRESSED_DELAY;
 			}
 			else
-			delay+=SINGLE_PRESSED_DELAY;
+			delay+=SINGLE_REEASED_DELAY;
 		}
 		
 	}
 }
 
 void seven_seg_app(void ) {
-	uint8_t count_number,delay_time;
+	uint8_t count_number;
+	uint32_t delay_time;
 	sevenSegInit(SEG_0);
 	sevenSegInit(SEG_1);
 	
@@ -91,12 +102,13 @@ void seven_seg_app(void ) {
 		while(count_number<END_NUMBER){
 			
 			while((count_number&RIGHT_SEG_DATA_MASK)<MAX_COUN_RIGHT_SEG){
+				
 				delay_time=START;
+				
 				for(;delay_time<COUNT_TIME;delay_time++){
+
 					sevenSegWrite(SEG_0,count_number);
-					softwareDelayMs(SEG_ENABLE_TIME);
 					sevenSegWrite(SEG_1,(count_number>>LEFT_SEG_DATA_MASK));
-					softwareDelayMs(SEG_ENABLE_TIME);
 				}
 				count_number++;
 			}

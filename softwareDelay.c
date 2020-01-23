@@ -6,11 +6,10 @@
  */ 
 #include "softwareDelay.h"
 void softwareDelayMs(uint32_t u32_delay_in_ms){
-	uint32_t volatile s=0;
-	uint32_t period=0;
-	for(;period<u32_delay_in_ms;period++){
-		
-		for (;s<233; ){
+	uint32_t  s=0;
+	for(;u32_delay_in_ms;u32_delay_in_ms--){
+		        s=0;
+		for (;s<2285; ){
 			s++;
 		}
 	}

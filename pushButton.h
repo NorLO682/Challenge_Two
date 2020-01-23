@@ -11,7 +11,7 @@
 #include "softwareDelay.h"
 
 
-#define BOUNCING_TIMEiNm 30
+
 
 typedef enum En_buttonId_t{
 	BTN_0,

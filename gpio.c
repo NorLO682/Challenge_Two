@@ -1,24 +1,25 @@
 #include "gpio.h"
+#define INIT_VALUE (0x00)
 
-void gpioPortDirection(uint8_t u8_port, uint8_t u8_direction){
+void gpioPortDirection(uint8_t u8_port, uint8_t u8_direction){//corrected
+
 	switch (u8_port){
 		case GPIOA :
-			PORTA_DIR=INPUT;
+			PORTA_DIR=u8_direction;
 			break;
 			
 			case GPIOB :
-			PORTB_DIR =INPUT;
+			PORTB_DIR =u8_direction;
 			break;
 			
 			case GPIOC :
-			PORTC_DIR=INPUT;
+			PORTC_DIR=u8_direction;
 			break;
 			
 			case GPIOD :
-			PORTC_DIR=INPUT;
+			PORTC_DIR=u8_direction;
 			break;
 	}
-
 }
 
 void gpioPortWrite(uint8_t u8_port, uint8_t u8_value){
@@ -64,8 +65,8 @@ void gpioPortWrite(uint8_t u8_port, uint8_t u8_value){
 
 uint8_t gpioPortRead(uint8_t u8_port){
 
-	uint8_t u8_port_data;//
-	
+	uint8_t u8_port_data=INIT_VALUE;
+
 	switch (u8_port){
 		
 		case GPIOA :
@@ -86,84 +87,169 @@ uint8_t gpioPortRead(uint8_t u8_port){
 			}
 			return u8_port_data;
 }
-
 void gpioPinDirection(uint8_t u8_port, uint8_t u8_pins, uint8_t u8_direction){
 	switch (u8_port){
-		
+		//two implementation method (first ,second )  
 		case GPIOA :
-		u8_direction= u8_pins&u8_direction;
-		PORTA_DIR=(~u8_pins)&PORTA_DIR;
-		PORTA_DIR=u8_direction|PORTA_DIR;
+		{//first 
+		u8_direction&=u8_pins;
+		PORTA_DIR&=(~u8_pins);
+		PORTA_DIR|=u8_direction;
+	        }
+				
+		/*{ // second 
+			if(OUTPUT==u8_direction){
+			PORTA_DIR|=	u8_pins;
+			}
+			else
+			PORTA_DIR|=(~u8_pins);
+			}*/
+			
 			break;
 			
 			case GPIOB :
-		u8_direction= u8_pins&u8_direction;
-		PORTB_DIR=(~u8_pins)&PORTB_DIR;
-		PORTB_DIR=u8_direction|PORTB_DIR;
+			
+			{ //first  
+		u8_direction&= u8_pins;
+		PORTB_DIR&=(~u8_pins);
+		PORTB_DIR|=u8_direction;
+			}
+		/*{ // second 
+			if(OUTPUT==u8_direction){
+			PORTB_DIR|=	u8_pins;
+			}
+			else
+			PORTB_DIR|=(~u8_pins);
+			}*/	
+			break;
 			
 			case GPIOC :
-		u8_direction= u8_pins&u8_direction;
-		PORTC_DIR=(~u8_pins)&PORTC_DIR;
-		PORTC_DIR=u8_direction|PORTC_DIR;
+			
+			{//first method
+					u8_direction&= u8_pins;
+					PORTC_DIR&=(~u8_pins);
+					PORTC_DIR|=u8_direction;
+					}
+		/*{ // second 
+			if(OUTPUT==u8_direction){
+			PORTC_DIR|=	u8_pins;
+			}
+			else
+			PORTC_DIR|=(~u8_pins);
+			}*/
 			break;
 			
 			case GPIOD :
-			u8_direction= u8_pins&u8_direction;
-		PORTD_DIR=(~u8_pins)&PORTD_DIR;
-		PORTD_DIR=u8_direction|PORTD_DIR;
+			
+			{//first
+				u8_direction&= u8_pins;
+		PORTD_DIR&=(~u8_pins);
+		PORTD_DIR|=u8_direction;
+		}
+		
+		/*{ // second 
+			if(OUTPUT==u8_direction){
+			PORTD_DIR|=	u8_pins;
+			}
+			else
+			PORTD_DIR|=(~u8_pins);
+			}*/	
 			break;
 	}
+	
 	
 }
 
 void gpioPinWrite(uint8_t u8_port, uint8_t u8_pins, uint8_t u8_value){
+	
 	switch (u8_port){
 		
-		case GPIOA :
-		u8_value= u8_pins&u8_value;
-		PORTA_DATA=(~u8_pins)&PORTA_DATA;
-		PORTA_DATA=u8_value|PORTA_DATA;
+		//two implementation method (first ,second ) 
+		
+		 
+		 case GPIOA :
+		 { //first
+		u8_value&= u8_pins;
+		PORTA_DATA&=(~u8_pins);
+		PORTA_DATA|=u8_value;
+		}
+		/*{ // second 
+			if(HIGH==u8_value){
+			PORTA_DATA|=u8_pins;
+			}
+			else
+			PORTA_DATA|=(~u8_pins);
+			}*/
 			break;
 			
 			case GPIOB :
-		u8_value= u8_pins&u8_value;
-		PORTB_DATA=(~u8_pins)&PORTB_DATA;
-		PORTB_DATA=u8_value|PORTB_DATA;
+			
+			{//first		
+		u8_value&= u8_pins;
+		PORTB_DATA&=(~u8_pins);
+		PORTB_DATA|=u8_value;
+			}
+			/*{ // second 
+			if(HIGH==u8_value){
+			PORTB_DATA|=u8_pins;
+			}
+			else
+			PORTB_DATA|=(~u8_pins);
+			}*/
+			break;
 			
 			case GPIOC :
-		u8_value= u8_pins&u8_value;
-		PORTC_DATA=(~u8_pins)&PORTC_DATA;
-		PORTC_DATA=u8_value|PORTC_DATA;
+			{//first
+		u8_value&= u8_pins;
+		PORTC_DATA&=(~u8_pins);
+		PORTC_DATA|=u8_value;
+		}
+		/*{ // second 
+			if(HIGH==u8_value){
+			PORTC_DATA|=u8_pins;
+			}
+			else
+			PORTC_DATA|=(~u8_pins);
+			}*/
 			break;
 			
 			case GPIOD :
-		u8_value= u8_pins&u8_value;
-		PORTD_DATA=(~u8_pins)&PORTD_DATA;
-		PORTD_DATA=u8_value|PORTD_DATA;
+			{//first
+		u8_value&= u8_pins;
+		PORTD_DATA&=(~u8_pins);
+		PORTD_DATA|=u8_value;
+		}
+		
+		/*{ // second 
+			if(HIGH==u8_value){
+			PORTD_DATA|=u8_pins;
+			}
+			else
+			PORTD_DATA|=(~u8_pins);
+			}*/	
 			break;
-	}
-	
-	
-}
+		}
+		}
+		
 
 void gpioPinToggle(uint8_t u8_port, uint8_t u8_pins){
 	
 	switch (u8_port){
 		
 		case GPIOA :
-	PORTA_DATA=u8_pins^PORTA_DATA;
+	PORTA_DATA^=u8_pins;
 			break;
 			
 			case GPIOB :
-	PORTB_DATA=u8_pins^PORTB_DATA;
+	PORTB_DATA^=u8_pins;
 			
 			case GPIOC :
-	PORTC_DATA=u8_pins^PORTC_DATA;
+	PORTC_DATA^=u8_pins;
 
 			break;
 			
 			case GPIOD :
-	 PORTD_DATA=u8_pins^PORTD_DATA;
+	 PORTD_DATA^=u8_pins;
 
 			break;
 	}
@@ -171,7 +257,8 @@ void gpioPinToggle(uint8_t u8_port, uint8_t u8_pins){
 }
 
 uint8_t gpioPinRead(uint8_t u8_port, uint8_t u8_pin){
-	uint8_t u8_port_data;//
+	uint8_t u8_port_data=INIT_VALUE;
+	
 	switch (u8_port){
 	
 		case GPIOA :
@@ -180,6 +267,7 @@ uint8_t gpioPinRead(uint8_t u8_port, uint8_t u8_pin){
 			
 			case GPIOB :
 	u8_port_data=u8_pin&PORTB_PIN;
+	         break;
 			
 			case GPIOC :
     u8_port_data=u8_pin &PORTC_PIN;
@@ -189,6 +277,14 @@ uint8_t gpioPinRead(uint8_t u8_port, uint8_t u8_pin){
     u8_port_data=u8_pin &PORTD_PIN;
 			break;
 	}
-				return u8_port_data;
+	
+	if(u8_port_data>LOW)
+      return HIGH ;
+	  else 
+	  return LOW ;
 
 }
+			
+			
+			
+		
