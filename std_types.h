@@ -14,7 +14,7 @@
 /************************************************************************/
 
 #define NULL	((void *)0)
-
+typedef   double    f64_t;
 typedef unsigned char uint8_t;
 typedef unsigned int uint16_t;
 typedef unsigned long int uint32_t;
