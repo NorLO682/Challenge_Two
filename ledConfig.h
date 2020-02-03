@@ -15,6 +15,7 @@
  */
 #define LED_MAX_NUM	(4)
 
+
 /*
  * LED_x_GPIO and LED_x_BIT
  * where x is the led identifier

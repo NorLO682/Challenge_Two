@@ -21,38 +21,48 @@
 	
 	 // TIMER0 DEFINTION 
 	  #define  T0_MASK_MODE  0x48
-	  
-	 #define T1_MASK_MODE  0x0318
-	 #define T1_MASK_DIS_EN_I  0xC3
 	 #define T0_DELAY_MILI_PRESCALER_VALUE 1024
 	 
-// 	 #define TICK_TIME_NO_PRE 0.0000000625l
-// 	 #define TICK_TIME_8_PRE 0.0000005l
-// 	 #define TICK_TIME_64_PRE 0.000004l
-// 	 #define TICK_TIME_256_PRE 0.000016l
-// 	 #define TICK_TIME_1204_PRE 0.000064l
+
 	 #define TIMERS1_2_RESELUTION1 256
    
     #define  TOV0_FLAG_BIT  0x01
 	#define  T0_TIME_TOV_PRE_1024  16.384
 	#define  T0_TIME_TOV_NO_PRE  0.016
+   
     #define  T0_TICK_TIME_PRE_8  (0.5)
 	
+	//TIMER 1 DEFINE 
+	 
+	 #define T1_MASK_MODE  0x0318
+	 #define T1_MASK_DIS_EN_I  0xC3
+	 #define T1_RESLUTION 65536
+	 #define  TOV1_FLAG_BIT  0x04
+	 #define OC1A_FLAG_BIT 0x10
+	
+	#define T1_TICK_TIME_PRE_8  0.0005
+	
+	#define T1_TICK_TIME_PRE_8_IN_US (0.5)
+	//#define T1_TICK_TIME_PRE_8  0.0000625 work wrong 
+		
 	 #define  TOV2_FLAG_BIT  0x40
+	  #define  OC2_FLAG_BIT  0x80
+	  #define T2_TIME_TOV_PRE_1024 16.384
+	  #define T2_TIME_TOV_NO_PRE   0.016
+
 
 static  En_timer0perscaler_t prescaler_0=T0_NO_CLOCK;
 static  En_timer1perscaler_t prescaler_1=T1_NO_CLOCK;
 static  En_timer0perscaler_t prescaler_2=T0_NO_CLOCK;
 
-//static  uint8_t perscaler_mask_arr[5]={T0_PRESCALER_NO,T0_PRESCALER_8,T0_PRESCALER_64,
-	                                    //T0_PRESCALER_256,T0_PRESCALER_1024};
- 
- //static f64_t tick_time_value_arr[5]={ 0.0000000625, 0.0000005, 0.000004,0.000016,0.000064};
+
 
  static  volatile uint8_t tcnt0_on_pwm=0x00;
+   
+  static  volatile uint16_t tcnt1_on_pwm=0x00; 
+  static  volatile uint8_t tcnt2_on_pwm=0x00;
  
- static  volatile uint8_t start_pwm0=1;
- static  volatile uint16_t no_of_tick=0xffff;
+ 
  
  // Timer 0///
 
@@ -65,21 +75,19 @@ static  En_timer0perscaler_t prescaler_2=T0_NO_CLOCK;
 				   CLEAR_BIT(TIMSK,BIT0);
 				   CLEAR_BIT(TIMSK,BIT1);
 				   TCCR0 |= en_mode| en_OC0;
-					prescaler_0=en_prescal;
-				 TIMSK|=en_interruptMask; 
 				   TCNT0 = u8_initialValue;
 				   OCR0=u8_outputCompare;
-				  // TCCR0|=en_prescal;
+				   prescaler_0=en_prescal;
+				 TIMSK|=en_interruptMask;
+				 if (en_interruptMask!=T0_POLLING)
+				SET_BIT(SREG,BIT7);
+				 
 				   }
 				   
 				   
 void timer0Set(uint8_t u8_value){
 	TCNT0 =u8_value;
-// 	uint8_t test_register=TCCR0&T0_MASK_MODE ;;
-// 	 if(test_register==T0_NORMAL_MODE) 
-// 	TCNT0 =u8_value;
-// 	else if (TCCR0==T0_COMP_MODE) 
-// 	OCR0=u8_value;
+
 }
 
 uint8_t timer0Read(void){
@@ -88,7 +96,6 @@ uint8_t timer0Read(void){
 
 	
 void timer0Start(void){
-	//TCCR0&=T0_NO_CLOCK;
 	TCCR0|=prescaler_0;
 }
 
@@ -98,23 +105,20 @@ void timer0Stop(void){
 
 void timer0DelayMs(uint16_t u16_delay_in_ms){  
 	
-	uint8_t prescaler=T0_PRESCALER_1024 , register_status=TCCR0;  //not important register_status  
-	//uint32_t prescaler_value=T0_DELAY_MILI_PRESCALER_VALUE;
+	uint8_t prescaler=T0_PRESCALER_1024 ; 
 	uint64_t count=0;
-	//f64_t  time_over_flow=(prescaler_value*1000.0*256)/F_CPU;
 	f64_t  time_over_flow= T0_TIME_TOV_PRE_1024;
 	f64_t  F_count=0;
+	
 	TCCR0=0x00;
 	TCNT0=0x00;
-	TCCR0|=T0_NORMAL_MODE|T0_OC0_DIS;
-
-	SET_BIT(TIFR,TOV0_FLAG_BIT);
+	
+	TCCR0|=T0_NORMAL_MODE|T0_OC0_DIS|T0_POLLING;
+    SET_BIT(TIFR,TOV0_FLAG_BIT);
+	 
 	  
-	// if(u16_delay_in_ms<time_over_flow){
 		if(u16_delay_in_ms< T0_TIME_TOV_PRE_1024){
-		 prescaler=T0_PRESCALER_NO,
-		// prescaler_value=T0_PRESCALER_NO;
-		 //time_over_flow=(T0_PRESCALER_NO*1000.0*256)/(F_CPU);
+		 prescaler=T0_PRESCALER_NO;
 		 time_over_flow=T0_TIME_TOV_NO_PRE;
 	 }
 	 
@@ -122,8 +126,8 @@ void timer0DelayMs(uint16_t u16_delay_in_ms){
 	  
 	  if(((F_count-(uint64_t)F_count)*1000)>0){
 		  F_count++;
-		  //TCNT0=256*(1-(F_count-((uint64_t)F_count)));
-		   TCNT0=(uint8_t)(256*(1-(F_count-((uint64_t)F_count))));
+		  
+		    TCNT0=(256*(1-(F_count-((uint64_t)F_count))));
 	 }
 	  TCCR0|= prescaler;
 	  while(count<F_count){
@@ -131,23 +135,23 @@ void timer0DelayMs(uint16_t u16_delay_in_ms){
 		  count++;
 		 SET_BIT(TIFR,TOV0_FLAG_BIT);
 	  }
-	 TCCR0=register_status&T0_NO_CLOCK;	
+	 TCCR0&=T0_NO_CLOCK;	
 	 	 
 }
 
 void timer0DelayUs(uint32_t u32_delay_in_us){
 
 	uint8_t prescaler=T0_PRESCALER_8 ,
-	         tcnt_value=0x00, 
-			 register_status=TCCR0;  //not important register_status
+	         tcnt_value=0x00; 
+	
 	f64_t  F_count=0,G_count=1;
 	uint64_t count=0;
 	TCCR0=0x00;
 	TCNT0=0x00;
 	TCCR0|=T0_NORMAL_MODE|T0_OC0_DIS;
 	SET_BIT(TIFR,TOV0_FLAG_BIT);
-	
-	F_count=((u32_delay_in_us-75)/ T0_TICK_TIME_PRE_8);
+	 
+	F_count=((u32_delay_in_us-72)/ T0_TICK_TIME_PRE_8);
 	
 	
 	if( F_count<=256.0){
@@ -174,14 +178,12 @@ void timer0DelayUs(uint32_t u32_delay_in_us){
 		SET_BIT(TIFR,TOV0_FLAG_BIT);
 		count++; 
 	   }
-	TCCR0=register_status&T0_NO_CLOCK;
+	TCCR0&=T0_NO_CLOCK;
 }
 
-/*void timer0SwPWM(uint8_t u8_dutyCycle,uint32_t u8_frequency){
-	uint16_t ocr_value=0;
-	
-	
-
+void timer0SwPWM(uint8_t u8_dutyCycle,uint8_t u8_frequency){
+	uint8_t ocr_value=0;
+	gpioPinDirection(T0_PWM_GPIO,T0_PWM_BIT,OUTPUT);
 	TCCR0=0x00;
 	TCCR0|=(T0_NORMAL_MODE|T0_OC0_DIS);
 	SET_BIT(TIFR,TOV0_FLAG_BIT);
@@ -189,23 +191,22 @@ void timer0DelayUs(uint32_t u32_delay_in_us){
 	TIMSK|=T0_INTERRUPT_NORMAL|T0_INTERRUPT_CMP;
 	SET_BIT(SREG,BIT7);
 	
+if(u8_dutyCycle==100){
+TIMSK&=~T0_INTERRUPT_CMP;
 	
-// if(u8_dutyCycle==100){
-// TIMSK&=~T0_INTERRUPT_CMP;
-// 	
-// }
-// else if(u8_dutyCycle==0){
-// TIMSK&=~T0_INTERRUPT_NORMAL;
-// }
+}
+else if(u8_dutyCycle==0){
+TIMSK&=~T0_INTERRUPT_NORMAL;
+}
 	 switch(u8_frequency) {
 		 case 100:
 		 tcnt0_on_pwm=100;
-		  ocr_value=((256- tcnt0_on_pwm)*(u8_dutyCycle/100.0))+tcnt0_on_pwm+1;
+		  ocr_value=((256- tcnt0_on_pwm)*(u8_dutyCycle/100.0))+tcnt0_on_pwm;
            break;
 		   
 		   case 200:
 		   tcnt0_on_pwm=178;
-		    ocr_value=((256- tcnt0_on_pwm)*(u8_dutyCycle/100.0))+tcnt0_on_pwm+1;
+		    ocr_value=((256- tcnt0_on_pwm)*(u8_dutyCycle/100.0))+tcnt0_on_pwm;
 	break;
 	 }
 	
@@ -214,10 +215,10 @@ void timer0DelayUs(uint32_t u32_delay_in_us){
 	TCCR0|=T0_PRESCALER_1024;
 
 
-}*/
+}
  MY_ISR(TIMER0_OVF_vect){
  gpioPinWrite(T0_PWM_GPIO,T0_PWM_BIT,HIGH);
- TCNT0=100;
+ TCNT0=tcnt0_on_pwm;
  //start_pwm0=1;
  }
 
@@ -254,7 +255,9 @@ void timer1Init(En_timer1Mode_t en_mode,
 								 
 							    prescaler_1=en_prescal;
 							    TIMSK|=en_interruptMask;
-						//	    TCCR1|=en_prescal;
+								 if (en_interruptMask!=T1_POLLING)
+								 SET_BIT(SREG,BIT7);
+						
 					
 				}
 				
@@ -264,46 +267,160 @@ void timer1Set(uint16_t u16_value){
 	uint8_t register_status=TIMSK;
 	TIMSK&=T1_MASK_DIS_EN_I ;
 	TCNT1 =u16_value;
-//	uint16_t test_register=TCCR1&T1_MASK_MODE;
-// 	 if(test_register==T1_NORMAL_MODE)
-// 	 TCNT1 =u16_value;
-// 	 else if (test_register==T1_COMP_MODE_OCR1A_TOP)
-// 	 OCR1A=u16_value;
-// 	 else if (test_register==T1_COMP_MODE_ICR1_TOP)
-// 	 ICR1=u16_value;
-
-	 TIMSK=register_status;
+	TIMSK=register_status;
 }
 
 uint16_t timer1Read(void){
-	uint8_t tccr1_status_register_=TCCR1;
+	//uint8_t tccr1_status_register_=TCCR1;
 	uint8_t timsk_status_register=TIMSK;
 	uint16_t tcnt_value;
-	TCCR1&=T1_NO_CLOCK;//DOES READ STOP COUNT !
+	//TCCR1&=T1_NO_CLOCK;//DOES READ STOP COUNT !
 	TIMSK&=T1_MASK_DIS_EN_I ;
 	tcnt_value=TCNT1;
-	TCCR1=tccr1_status_register_;
+	//TCCR1=tccr1_status_register_;
 	TIMSK=timsk_status_register;
 	return tcnt_value;
 }
 
 void timer1Start(void){
-//TCCR1&=T0_NO_CLOCK;
 TCCR1|=prescaler_1;
 }
 
 void timer1Stop(void){
 		TCCR1B&=T1_NO_CLOCK;
-		//TCCR1B&=T0_NO_CLOCK;
 }
 
-void timer1DelayMs(uint16_t u16_delay_in_ms);
+void timer1DelayMs(uint16_t u16_delay_in_ms){
+		uint16_t tcnt_value=0x0000;
+		f64_t  F_count=0,G_count=1;
+		uint64_t count=0;
+		TCCR1=0x0000;
+		TCNT1=0x0000;
+		TCCR1|=T1_NORMAL_MODE|T1_OC1_DIS|T1_POLLING;
+		SET_BIT(TIFR,TOV1_FLAG_BIT);
 
-void timer1DelayUs(uint32_t u32_delay_in_us);
 
-void timer1SwPWM(uint8_t u8_dutyCycle,uint8_t u8_frequency);
+		F_count=(u16_delay_in_ms/ T1_TICK_TIME_PRE_8);
+		
+		if( F_count>T1_RESLUTION)  {
+			G_count=(F_count/T1_RESLUTION);
+			
+			if(((G_count-(uint64_t)G_count)*1000)>0){
+				G_count++;
+				//tcnt_value= 256*(1-((G_count-(uint64_t)G_count)*1000.0));
+				tcnt_value= T1_RESLUTION*(1.0-(G_count-(uint64_t)G_count));
+			}
+		}
 
-/*===========================Timer2 Control===============================*/
+		else{
+			
+			tcnt_value=(T1_RESLUTION-F_count);
+		}
+		TCNT1=tcnt_value;
+		TCCR1|= T1_PRESCALER_8;
+		while(count<G_count){
+			while(READ_BIT(TIFR,TOV1_FLAG_BIT)== LOW_BIT );
+			SET_BIT(TIFR,TOV1_FLAG_BIT);
+			count++;
+		}
+		
+		TCCR1=0x0000;
+	}
+
+
+
+void timer1DelayUs(uint32_t u32_delay_in_us){//incorrect +42US
+	uint16_t tcnt_value=0x0000;
+	f64_t  F_count=0,G_count=1;
+	uint64_t count=0;
+	TCCR1=0x0000;
+	TCNT1=0x0000;
+	TCCR1|=T1_NORMAL_MODE|T1_OC1_DIS|T1_POLLING;
+	SET_BIT(TIFR,TOV1_FLAG_BIT);
+
+
+	F_count=(u32_delay_in_us/ T1_TICK_TIME_PRE_8_IN_US);
+	
+	if( F_count>T1_RESLUTION)  {
+		G_count=(F_count/T1_RESLUTION);
+		
+		if(((G_count-(uint64_t)G_count)*1000)>0){
+			G_count++;
+			//tcnt_value= 256*(1-((G_count-(uint64_t)G_count)*1000.0));
+			tcnt_value= T1_RESLUTION*(1.0-(G_count-(uint64_t)G_count));
+		}
+	}
+
+	else{
+		
+		tcnt_value=(T1_RESLUTION-F_count);
+	}
+	TCNT1=tcnt_value;
+	TCCR1|= T1_PRESCALER_8;
+	while(count<G_count){
+		while(READ_BIT(TIFR,TOV1_FLAG_BIT)== LOW_BIT );
+		SET_BIT(TIFR,TOV1_FLAG_BIT);
+		count++;
+	}
+	
+	//TCCR1&=T1_NO_CLOCK;
+	TCCR1=0x0000;
+}
+
+void timer1SwPWM(uint8_t u8_dutyCycle,uint8_t u8_frequency){	
+	 uint16_t ocr_value=0;
+	gpioPinDirection(T1_PWM_GPIO,T1_PWM_BIT,OUTPUT);
+	TCCR1=0x0000;
+	TCCR1|=(T1_NORMAL_MODE|T1_OC1_DIS);
+	
+	SET_BIT(TIFR,TOV1_FLAG_BIT);
+	SET_BIT(TIFR,OC1A_FLAG_BIT);
+	SET_BIT(TIFR,0x08);
+	
+
+	TIMSK|=T1_INTERRUPT_NORMAL|T1_INTERRUPT_CMP_1A;
+
+	switch (u8_dutyCycle){
+		case 100:
+		TIMSK&=~T1_INTERRUPT_CMP_1A;
+		break;
+		case 0:
+		TIMSK&=~T1_INTERRUPT_NORMAL;
+		break;
+	}
+	
+	SET_BIT(SREG,BIT7);
+	switch(u8_frequency) {
+		case 100:
+		tcnt1_on_pwm=65380;
+		ocr_value=((T1_RESLUTION- tcnt1_on_pwm)*(u8_dutyCycle/100.0))+tcnt1_on_pwm;
+		break;
+		
+		case 200:
+		tcnt1_on_pwm=65458;
+		ocr_value=((T1_RESLUTION- tcnt1_on_pwm)*(u8_dutyCycle/100.0))+tcnt1_on_pwm;
+		break;
+	}
+	
+	TCNT1= tcnt1_on_pwm;
+	OCR1A=ocr_value;
+	gpioPinWrite(T1_PWM_GPIO,T1_PWM_BIT,HIGH);
+	TCCR1|=T1_PRESCALER_1024;
+
+}
+MY_ISR(TIMER1_OVF_vect){
+	gpioPinWrite(T1_PWM_GPIO,T1_PWM_BIT,HIGH);
+	TCNT1=tcnt1_on_pwm;
+}
+
+MY_ISR(TIMER1_COMPA_vect){
+	gpioPinWrite(T1_PWM_GPIO,T1_PWM_BIT,LOW);
+}
+
+	
+
+
+//===========================Timer2 Control===============================*/
 
 void timer2Init(En_timer2Mode_t en_mode,En_timer2OC_t en_OC,
                 En_timer2perscaler_t en_prescal, uint8_t u8_initialValue,
@@ -320,20 +437,17 @@ void timer2Init(En_timer2Mode_t en_mode,En_timer2OC_t en_OC,
 					   TIMSK|=en_interruptMask;
 					   TCNT2 = u8_initialValue;
 					   OCR2=u8_outputCompare;
-					   CLEAR_BIT(ASSR,BIT3);//
-					 //  TCCR2|=en_prescal;
+					   CLEAR_BIT(ASSR,BIT3);
+					    if (en_interruptMask!=T2_POLLING){
+						    SET_BIT(SREG,BIT7);
+					    }
+					
 				  }
 
 void timer2Set(uint8_t u8_a_value){
 
 	TCNT0 =u8_a_value;
-// 	uint8_t register_status=TCCR2;
-// 	TCCR2&=T0_MASK_MODE ;
-// 	if(TCCR2==T2_NORMAL_MODE)
-// 	TCNT0 =u8_a_value;
-// 	else if (TCCR0==T0_COMP_MODE)
-// 	OCR0=u8_a_value;
-// 	TCCR0=register_status;
+
 }
 
 
@@ -352,26 +466,23 @@ void timer2Stop(void){
 }
 
 void timer2DelayMs(uint16_t u16_delay_in_ms){
-	uint8_t prescaler=T0_PRESCALER_1024 , register_status=TCCR2;  //not important register_status
-	//uint32_t prescaler_value=T0_DELAY_MILI_PRESCALER_VALUE;
+	uint8_t prescaler=T2_PRESCALER_1024 ;
 	uint64_t count=0;
-	//f64_t  time_over_flow=(prescaler_value*1000.0*256)/F_CPU;
-	f64_t  time_over_flow= T0_TIME_TOV_PRE_1024;
+	f64_t  time_over_flow= T2_TIME_TOV_PRE_1024;
 	f64_t  F_count=0;
 	TCCR2=0x00;
 	TCNT2=0x00;
 	TCCR2|=T2_NORMAL_MODE|T2_OC2_DIS;
 	SET_BIT(TIFR,TOV2_FLAG_BIT);
 	
-	// if(u16_delay_in_ms<time_over_flow){
-	if(u16_delay_in_ms< T0_TIME_TOV_PRE_1024){
+	
+	if(u16_delay_in_ms< T2_TIME_TOV_PRE_1024){
 		prescaler=T2_PRESCALER_NO,
-		//prescaler_value=T2_PRESCALER_NO;
-		//time_over_flow=(T0_PRESCALER_NO*1000.0*256)/(F_CPU);
-		time_over_flow=T0_TIME_TOV_NO_PRE;
+		
+		time_over_flow=T2_TIME_TOV_NO_PRE;
 	}
 	
-	F_count=(u16_delay_in_ms-0.15)/ time_over_flow;
+	F_count=(u16_delay_in_ms)/ time_over_flow;
 	
 	if(((F_count-(uint64_t)F_count)*1000)>0){
 		F_count++;
@@ -384,41 +495,36 @@ void timer2DelayMs(uint16_t u16_delay_in_ms){
 		count++;
 		SET_BIT(TIFR,TOV2_FLAG_BIT);
 	}
-	TCCR2=register_status&T0_NO_CLOCK;
+	TCCR2&=T2_NO_CLOCK;
 }
 
-void timer2DelayUs(uint32_t u32_delay_in_us){
-	uint8_t prescaler=T0_PRESCALER_8 ,
-	tcnt_value=0x00,
-	register_status=TCCR0;  //not important register_status
-	
+void timer2DelayUs(uint32_t u32_delay_in_us){// UNcoreect delay
+	uint8_t prescaler=T2_PRESCALER_8,
+	tcnt_value=0x00;
+	 
 	f64_t  F_count=0,G_count=1;
 	uint64_t count=0;
 	
-
 	TCCR2=0x00;
 	TCNT2=0x00;
-	TCCR2|=T0_NORMAL_MODE|T2_OC2_DIS;
-	SET_BIT(TIFR,TOV2_FLAG_BIT);
-	
+	TCCR2|=T2_NORMAL_MODE|T2_OC2_DIS;
+ 	SET_BIT(TIFR,TOV2_FLAG_BIT);
+
 	F_count=(u32_delay_in_us/ T0_TICK_TIME_PRE_8);
 	
 	if( F_count>256)  {
 		G_count=(F_count/256);
 		
 		if(((G_count-(uint64_t)G_count)*1000)>0){
-			G_count++;
-			tcnt_value= 256*(1-((G_count-(uint64_t)G_count)*1000.0));
+		    G_count++;
+			//tcnt_value= 256*(1-((G_count-(uint64_t)G_count)*1000.0));
+			tcnt_value= 256*(1.0-(G_count-(uint64_t)G_count));
 		}
 	}
 
 	else{
 		
 		tcnt_value=(256-F_count);
-		//if(((F_count-(uint64_t)F_count)*1000)>0){ //if it fractin i have 2 choise tcnt_value--or keep it as it
-		//tcnt_value--;
-		//}
-		
 	}
 	TCNT2=tcnt_value;
 	TCCR2|= prescaler;
@@ -427,9 +533,71 @@ void timer2DelayUs(uint32_t u32_delay_in_us){
 		SET_BIT(TIFR,TOV2_FLAG_BIT);
 		count++;
 	}
-	TCCR2=register_status&T0_NO_CLOCK;
+	TCCR2&=T2_NO_CLOCK;
 }
- void timer2SwPWM(uint8_t u8_dutyCycle,uint8_t u8_frequency);
+
+
+ void timer2SwPWM(uint8_t u8_dutyCycle,uint8_t u8_frequency){
+	 uint8_t ocr_value=0;
+ gpioPinDirection(T2_PWM_GPIO,T2_PWM_BIT,OUTPUT);
+ TCCR2=0x00;
+ TCCR2|=(T2_NORMAL_MODE|T2_OC2_DIS);
+ 
+ SET_BIT(TIFR,TOV2_FLAG_BIT);
+ SET_BIT(TIFR,OC2_FLAG_BIT);
+
+TIMSK|=T2_INTERRUPT_NORMAL|T2_INTERRUPT_CMP;
+
+switch (u8_dutyCycle){
+ case 100:
+	 TIMSK&=~T2_INTERRUPT_CMP;
+	 break;
+ case 0:
+	 TIMSK&=~T2_INTERRUPT_NORMAL;
+	 break;
+ }
+ 
+ SET_BIT(SREG,BIT7);
+ switch(u8_frequency) {
+	 case 100:
+	 tcnt2_on_pwm=100;
+	 ocr_value=((256- tcnt2_on_pwm)*(u8_dutyCycle/100.0))+tcnt2_on_pwm;
+	 break;
+	 
+	 case 200:
+	 tcnt2_on_pwm=178;
+	 ocr_value=((256- tcnt2_on_pwm)*(u8_dutyCycle/100.0))+tcnt2_on_pwm;
+	 break;
+ }
+ 
+ TCNT2= tcnt2_on_pwm;
+ OCR2=ocr_value;
+ gpioPinWrite(T2_PWM_GPIO,T2_PWM_BIT,HIGH);
+ TCCR2|=T2_PRESCALER_1024;
+
+ }
+ MY_ISR(TIMER2_OVF_vect){
+	 gpioPinWrite(T2_PWM_GPIO,T2_PWM_BIT,HIGH);
+	 TCNT2=tcnt2_on_pwm;
+ }
+
+ MY_ISR(TIMER2_COMP_vect){
+	 gpioPinWrite(T2_PWM_GPIO,T2_PWM_BIT,LOW);
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // 

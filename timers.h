@@ -180,7 +180,7 @@ void timer0DelayUs(uint32_t u32_delay_in_us);
  * Description:
  * @param dutyCycle
  */
-void timer0SwPWM(uint8_t u8_dutyCycle,uint32_t u8_frequency);
+void timer0SwPWM(uint8_t u8_dutyCycle,uint8_t u8_frequency);
 
 
 

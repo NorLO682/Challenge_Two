@@ -63,16 +63,16 @@
 
 #define TCCR1A	*((reg_type8_t) (0X4F))	
 #define TCCR1B	*((reg_type8_t) (0X4E))	
-#define TCCR1	*((reg_type16_t)(0X4E))//
+#define TCCR1	*((reg_type16_t)(0X4E))
 #define TCNT1H	*((reg_type8_t) (0X4D))
 #define TCNT1L	*((reg_type8_t) (0X4C))	
-#define TCNT1	*((reg_type16_t) (0X4C))//
+#define TCNT1	*((reg_type16_t) (0X4C))
 #define OCR1AH	*((reg_type8_t) (0X4B))
 #define OCR1AL	*((reg_type8_t) (0X4A))
-#define OCR1A	*((reg_type16_t) (0X4A))//
+#define OCR1A	*((reg_type16_t) (0X4A))
 #define OCR1BH	*((reg_type8_t) (0X49))
 #define OCR1BL	*((reg_type8_t) (0X48))
-#define OCR1B	*((reg_type16_t) (0X48))//	
+#define OCR1B	*((reg_type16_t) (0X48))
 #define ICR1H	*((reg_type8_t) (0X47))
 #define ICR1L	*((reg_type8_t) (0X46))	
 #define ICR1	*((reg_type8_t) (0X46))	
@@ -86,7 +86,8 @@
 #define TCNT2	*((reg_type8_t) (0X44))		
 #define OCR2	*((reg_type8_t) (0X43))		
 
-
+#define  ASSR   *((reg_type8_t) (0X42))
+#define  SREG  *((reg_type8_t) (0X5F))
 
 
 
